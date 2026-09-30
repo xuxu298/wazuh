@@ -276,7 +276,8 @@ int receive_msg()
                                 char **ignore_list;
                                 os_calloc(2, sizeof(char *), ignore_list);
                                 os_strdup(SHAREDCFG_FILENAME, *ignore_list);
-                                if (!UnmergeFiles(file, SHAREDCFG_DIR, OS_TEXT, &ignore_list)) {
+                                int unmerge_ok = UnmergeFiles(file, SHAREDCFG_DIR, OS_TEXT, &ignore_list);
+                                if (!unmerge_ok) {
                                     char msg_output[OS_MAXSTR];
 
                                     snprintf(msg_output, OS_MAXSTR, "%c:%s:%s",  LOCALFILE_MQ, "wazuh-agent", AG_IN_UNMERGE);
@@ -286,6 +287,9 @@ int receive_msg()
                                     if (cldir_ex_ignore(SHAREDCFG_DIR, (const char **)ignore_list)) {
                                         mwarn("Could not clean up shared directory.");
                                     }
+                                }
+                                /* Reload applied entries, preserving existing files after a partial failure. */
+                                if (unmerge_ok || ignore_list[1]) {
                                     clear_merged_hash_cache();
                                     if (agt->flags.remote_conf && !verifyRemoteConf()) {
                                         if (agt->flags.auto_restart) {
