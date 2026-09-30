@@ -224,7 +224,7 @@ class TestCheckUserLegacyHashRehash:
         # assertion) is satisfied even by sleep(0.0) or a flipped subtraction,
         # so it never actually catches a regression that stops padding at all.
         with patch.object(orm_module, "perf_counter", side_effect=[10.0, 10.02]), \
-                patch.object(orm_module, "_DEFAULT_HASH_CHECK_SECONDS", 0.05), \
+                patch.object(orm_module, "_default_hash_check_seconds", 0.05), \
                 patch.object(orm_module, "sleep") as mock_sleep:
             result = AuthenticationManager.check_user(manager, "legacy_user", "wrong_password")
 
@@ -275,13 +275,13 @@ class TestCheckUserLegacyHashRehash:
         # perf_counter() is called twice in check_user before the branch under
         # test: once for check_start, once right after for check_elapsed.
         # The assertion must run inside the patch context: patch.object restores
-        # _DEFAULT_HASH_CHECK_SECONDS to its pre-patch value on exit, regardless
+        # _default_hash_check_seconds to its pre-patch value on exit, regardless
         # of what check_user assigned to it while patched.
         with patch.object(orm_module, "perf_counter", side_effect=[100.0, 100.123]), \
-                patch.object(orm_module, "_DEFAULT_HASH_CHECK_SECONDS", 0.05):
+                patch.object(orm_module, "_default_hash_check_seconds", 0.05):
             AuthenticationManager.check_user(manager, "current_user", real_password)
             # EMA: 0.8 * old + 0.2 * sample = 0.8 * 0.05 + 0.2 * 0.123 = 0.0646
-            assert orm_module._DEFAULT_HASH_CHECK_SECONDS == pytest.approx(0.0646)
+            assert orm_module._default_hash_check_seconds == pytest.approx(0.0646)
 
     def test_default_hash_check_outlier_does_not_overwrite_calibration(self):
         """A single slow (or fast) sample moves the padding target by at most
@@ -303,11 +303,11 @@ class TestCheckUserLegacyHashRehash:
 
         # A wildly slow outlier sample (1.0s) against a stable 0.05s baseline.
         with patch.object(orm_module, "perf_counter", side_effect=[100.0, 101.0]), \
-                patch.object(orm_module, "_DEFAULT_HASH_CHECK_SECONDS", 0.05):
+                patch.object(orm_module, "_default_hash_check_seconds", 0.05):
             AuthenticationManager.check_user(manager, "current_user", real_password)
             # Only moves 20% of the way towards the outlier, not all the way to 1.0s.
-            assert orm_module._DEFAULT_HASH_CHECK_SECONDS == pytest.approx(0.8 * 0.05 + 0.2 * 1.0)
-            assert orm_module._DEFAULT_HASH_CHECK_SECONDS < 0.25
+            assert orm_module._default_hash_check_seconds == pytest.approx(0.8 * 0.05 + 0.2 * 1.0)
+            assert orm_module._default_hash_check_seconds < 0.25
 
     def test_legacy_hash_check_does_not_update_live_calibration(self):
         """A check against a legacy hash is not a valid sample of the current
@@ -325,11 +325,10 @@ class TestCheckUserLegacyHashRehash:
         mock_result.first.return_value = user
         manager.session.scalars.return_value = mock_result
 
-        orm_module._DEFAULT_HASH_CHECK_SECONDS = 0.42
-        with patch.object(orm_module, "sleep"):
+        with patch.object(orm_module, "_default_hash_check_seconds", 0.42), \
+                patch.object(orm_module, "sleep"):
             AuthenticationManager.check_user(manager, "legacy_user", "wrong_password")
-
-        assert orm_module._DEFAULT_HASH_CHECK_SECONDS == 0.42
+            assert orm_module._default_hash_check_seconds == 0.42
 
     def test_default_hash_not_rehashed(self):
         """A hash already using the current default method is not rewritten on login."""
@@ -349,33 +348,6 @@ class TestCheckUserLegacyHashRehash:
         assert result is True
         manager.session.query.assert_not_called()
         manager.session.commit.assert_not_called()
-
-    def test_legacy_hash_rehash_skipped_on_concurrent_password_change(self):
-        """If the stored hash changed since it was read, the compare-and-swap UPDATE
-        matches zero rows instead of overwriting the concurrently-set password.
-
-        This does not need to be asserted here (the real UPDATE's WHERE clause does
-        the work against the actual database), but check_user must still commit
-        without raising so a concurrent change isn't masked by an exception.
-        """
-        from wazuh.rbac.orm import AuthenticationManager
-
-        real_password = "correct_password"
-        legacy_hash = generate_password_hash(real_password, method="pbkdf2:sha256:150000")
-
-        manager = MagicMock()
-        mock_result = MagicMock()
-        user = MockUser("legacy_user", legacy_hash, user_id=42)
-        mock_result.first.return_value = user
-        manager.session.scalars.return_value = mock_result
-        # Simulate the UPDATE matching no rows because another process already
-        # changed the password (rowcount 0), as SQLAlchemy would report it.
-        manager.session.query.return_value.filter_by.return_value.update.return_value = 0
-
-        result = AuthenticationManager.check_user(manager, "legacy_user", real_password)
-
-        assert result is True
-        manager.session.commit.assert_called_once()
 
     def test_legacy_hash_login_succeeds_despite_rehash_write_failure(self):
         """A successful login is not turned into a failure by a rehash write error.

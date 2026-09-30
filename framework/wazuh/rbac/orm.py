@@ -6,7 +6,6 @@ import json
 import logging
 import os
 import re
-import statistics
 from datetime import datetime
 from enum import IntEnum
 from functools import partial
@@ -41,14 +40,10 @@ MAX_ID_RESERVED = 99
 CLOUD_RESERVED_RANGE = 89
 
 # Dummy hash for constant-time username enumeration protection
+_dummy_hash_start = perf_counter()
 _DUMMY_HASH = generate_password_hash("wazuh-dummy-constant-never-matches-any-real-password")
+_default_hash_check_seconds = perf_counter() - _dummy_hash_start
 _DEFAULT_HASH_METHOD = _DUMMY_HASH.split(':', 1)[0]
-_calibration_samples = []
-for _ in range(3):
-    _calibration_start = perf_counter()
-    check_password_hash(_DUMMY_HASH, "wazuh-timing-calibration-sample")
-    _calibration_samples.append(perf_counter() - _calibration_start)
-_DEFAULT_HASH_CHECK_SECONDS = statistics.median(_calibration_samples)
 
 # Start a session and set the default security elements
 DB_FILE = os.path.join(SECURITY_PATH, "rbac.db")
@@ -968,10 +963,9 @@ class AuthenticationManager(RBACManager):
         check_elapsed = perf_counter() - check_start
 
         if hash_to_check.startswith(f'{_DEFAULT_HASH_METHOD}:'):
-            global _DEFAULT_HASH_CHECK_SECONDS
-            _DEFAULT_HASH_CHECK_SECONDS = 0.8 * _DEFAULT_HASH_CHECK_SECONDS + 0.2 * check_elapsed
-
-        if user is not None and not hash_to_check.startswith(f'{_DEFAULT_HASH_METHOD}:'):
+            global _default_hash_check_seconds
+            _default_hash_check_seconds = 0.8 * _default_hash_check_seconds + 0.2 * check_elapsed
+        else:
             if result:
                 try:
                     self.session.query(User).filter_by(id=user.id, password=hash_to_check).update(
@@ -980,7 +974,7 @@ class AuthenticationManager(RBACManager):
                 except OperationalError:
                     self.session.rollback()
             else:
-                sleep(max(0.0, _DEFAULT_HASH_CHECK_SECONDS - check_elapsed))
+                sleep(max(0.0, _default_hash_check_seconds - check_elapsed))
 
         return result and user is not None
 
@@ -2913,7 +2907,7 @@ class DatabaseManager:
                 if user.id in (WAZUH_USER_ID, WAZUH_WUI_USER_ID):
                     auth_manager.update_user(user.id, user.password, hashed_password=True)
                     continue
-
+                
                 status = auth_manager.add_user(username=user.username,
                                                password=user.password,
                                                created_at=user.created_at,
@@ -2931,7 +2925,7 @@ class DatabaseManager:
                                           user_id=user.id,
                                           hashed_password=True,
                                           check_default=False)
-
+        
         # This is to avoid an error when trying to update default users roles, policies and rules
         if from_id == WAZUH_USER_ID and to_id == WAZUH_WUI_USER_ID:
             return
