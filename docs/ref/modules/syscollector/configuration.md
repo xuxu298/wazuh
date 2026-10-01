@@ -177,7 +177,7 @@ How often to trigger synchronization with the manager.
 Time between integrity checks for each inventory table.
 
 - **Default value:** `86400` (24 hours)
-- **Allowed values:** `0` or more (seconds)
+- **Allowed values:** `0` or more (seconds). With `0`, every enabled table is checked after each successful synchronization.
 - **Note:** Each of the 13 inventory tables (osinfo, hwinfo, packages, processes, ports, network_iface, network_protocol, network_address, users, groups, services, browser_extensions, hotfixes) is checked independently. When the interval elapses for a table:
   1. Agent calculates checksum-of-checksums for the table
   2. Sends checksum to manager for validation

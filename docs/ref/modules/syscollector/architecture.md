@@ -439,8 +439,7 @@ Recovery behavior is controlled by the `integrity_interval` parameter:
 ```
 
 **Default**: 86400 seconds (24 hours)
-**Minimum**: 60 seconds (1 minute)
-**Disabled**: Set to 0 to disable integrity checks
+**Allowed values**: `0` or more. With `0`, every enabled table is checked after each successful synchronization.
 
 ---
 
