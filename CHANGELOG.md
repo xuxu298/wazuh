@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - Fixed a root-level OS command injection in the rootcheck promiscuous-interface check. ([#39622](https://github.com/wazuh/wazuh/pull/39622))
 - Fixed a memory leak in `wazuh-remoted` when parsing repeated OS/version records in an agent keepalive. ([#39614](https://github.com/wazuh/wazuh/pull/39614))
 - Fixed logcollector following symbolic links and opening non-regular files without validating them on Linux and macOS. ([#39649](https://github.com/wazuh/wazuh/pull/39649))
+- Fixed `run_as` authorization-context regex rules matching only a prefix of the value instead of the whole value, including a trailing `$` anchor being dropped from the expression. ([#39770](https://github.com/wazuh/wazuh/pull/39770))
 
 ### Agent
 
@@ -24,10 +25,27 @@ All notable changes to this project will be documented in this file.
 - Fixed a root-level OS command injection in the rootcheck promiscuous-interface check. ([#39622](https://github.com/wazuh/wazuh/pull/39622))
 - Fixed logcollector following symbolic links and opening non-regular files without validating them on Linux and macOS. ([#39649](https://github.com/wazuh/wazuh/pull/39649))
 - Fixed logcollector following junctions and symbolic links and opening non-regular files without validating them on Windows. ([#39781](https://github.com/wazuh/wazuh/pull/39781))
+- Fixed logcollector memory usage growing with the length of a line read with the `multi-line-regex` format. ([#39800](https://github.com/wazuh/wazuh/pull/39800))
 - Added macOS support to the disable-account active response. ([#39463](https://github.com/wazuh/wazuh/pull/39463))
 - Fixed the macOS ULS reader losing the stored timestamp after log lines shorter than 31 characters. ([#39171](https://github.com/wazuh/wazuh/issues/39171))
 - Fixed the Windows agent reporting the operating system it had before an in-place feature update. ([#39547](https://github.com/wazuh/wazuh/pull/39547))
 - Fixed the Windows agent installer not applying the configuration file permissions to the `shared` directory. ([#39734](https://github.com/wazuh/wazuh/pull/39734))
+- Fixed the Solaris 10 and AIX agent packages leaving files in `/var/ossec` after removal. ([#39807](https://github.com/wazuh/wazuh/pull/39807))
+
+### Ruleset
+
+#### Fixed
+
+- Fixed two inverted checks in the Debian 10 SCA policy: single user mode authentication and the remote login warning banner. ([#39768](https://github.com/wazuh/wazuh/pull/39768))
+- Fixed the `/etc/security/opasswd` permission check failing when the optional `opasswd.old` file is absent in Debian 10, 12, 13 and Ubuntu 20.04, 22.04, 24.04 SCA policies. ([#39762](https://github.com/wazuh/wazuh/pull/39762))
+- Fixed MTA check in multiple SCA files. ([#39771](https://github.com/wazuh/wazuh/pull/39771))
+
+### RESTful API
+
+#### Fixed
+
+- Fixed configuration masking to cover the credential fields of cloud, integration and cluster HAProxy settings, and the group configuration files. ([#39706](https://github.com/wazuh/wazuh/pull/39706))
+- Fixed configuration masking not applying to XML tags written with whitespace or attributes. ([#39663](https://github.com/wazuh/wazuh/pull/39663))
 
 ## [v4.14.9]
 
@@ -40,8 +58,10 @@ All notable changes to this project will be documented in this file.
 
 #### Fixed
 
+- Fixed the vulnerability scanner stalling while the CTI feed applies a backlog of offsets, by releasing the feed lock between offset files instead of holding it for the whole backlog. ([#39051](https://github.com/wazuh/wazuh/issues/39051))
 - Bounded the agent control message copy to the source string length in `wazuh-remoted`. ([#38427](https://github.com/wazuh/wazuh/pull/38427))
 - Fixed the cluster server keeping pre-authentication connections open indefinitely by adding a handshake deadline and a global connection limit. ([#38449](https://github.com/wazuh/wazuh/pull/38449))
+- Fixed `wazuh-authd` keeping idle enrolment connections open indefinitely by closing any connection that has not completed its request within 30 seconds. ([#39539](https://github.com/wazuh/wazuh/pull/39539))
 - Fixed a memory leak in the `wazuh-analysisd` JSON decoder when an event repeats a static field. ([#38548](https://github.com/wazuh/wazuh/pull/38548))
 - Fixed integer underflows and an overflow in the `OS_StrBreak()` string splitter. ([#38625](https://github.com/wazuh/wazuh/pull/38625))
 - Restricted the Azure Graph wodle pagination to the Microsoft Graph endpoint, so the authentication token is not sent to another host. ([#38594](https://github.com/wazuh/wazuh/pull/38594))
@@ -56,9 +76,12 @@ All notable changes to this project will be documented in this file.
 
 #### Changed
 
+- Narrowed the Windows agent MSI pending-restart check to the agent's own files. ([#39746](https://github.com/wazuh/wazuh/pull/39746))
+- Added a script that builds the eBPF precompiled dependency with Zig for every Linux architecture. ([#39577](https://github.com/wazuh/wazuh/issues/39577))
 - Raised from 64 to 1024 the number of active response commands that `wazuh-execd` can load from `etc/shared/ar.conf`. ([#38509](https://github.com/wazuh/wazuh/pull/38509))
 - Added the missing compiler hardening flags (stack canary, PIE, full RELRO and FORTIFY_SOURCE) to the Linux binaries. ([#38571](https://github.com/wazuh/wazuh/pull/38571))
 - Removed the per-comparison JSON serialisation from the macOS ports deduplication in syscollector. ([#39167](https://github.com/wazuh/wazuh/issues/39167))
+- Allowed FIM eBPF whodata on capable kernels older than 5.8, such as RHEL 8.10. ([#39591](https://github.com/wazuh/wazuh/issues/39591))
 
 #### Fixed
 
@@ -92,9 +115,9 @@ All notable changes to this project will be documented in this file.
 - Fixed the macOS agent reporting zeroed password aging values for local users, where macOS defines no such policy. ([#39356](https://github.com/wazuh/wazuh/pull/39356))
 - Fixed the users inventory misreporting sudoers, missing group-based grants (e.g. macOS's `%admin`, Linux's `%sudo`/`%wheel`) and flagging unrelated accounts. ([#39165](https://github.com/wazuh/wazuh/issues/39165))
 - Fixed the users inventory never reading sudo grants placed in sudoers drop-in files (`/etc/sudoers.d/*`). ([#39165](https://github.com/wazuh/wazuh/issues/39165))
-- Fixed the macOS agent shipping preinstalled empty `logs/ossec.log`/`ossec.json` placeholders. ([#39120](https://github.com/wazuh/wazuh/issues/39120))
 - Fixed the Windows agent accepting `<whodata><provider>ebpf</provider></whodata>` and silently disabling whodata. ([#39353](https://github.com/wazuh/wazuh/issues/39353))
 - Fixed the FIM eBPF whodata healthcheck failing on RHEL 9 kernels and discarding the eBPF provider. ([#39570](https://github.com/wazuh/wazuh/pull/39570))
+- Fixed FIM eBPF whodata dropping events for files outside the root mount. ([#39708](https://github.com/wazuh/wazuh/pull/39708))
 
 ### Ruleset
 
@@ -236,7 +259,7 @@ All notable changes to this project will be documented in this file.
 - Improved cluster non-merged file path validation during worker file processing. ([#36296](https://github.com/wazuh/wazuh/pull/36296))
 - Improved cluster node name format validation in the hello handler. ([#36460](https://github.com/wazuh/wazuh/pull/36460))
 - Fixed missing `agent.host.ip` in inventory documents when agent IP is empty. ([#35475](https://github.com/wazuh/wazuh/pull/35475))
-- Fixed stale agent `synced` status after hot reload on cluster worker nodes. ([#6726](https://github.com/wazuh/external-devel-requests/issues/6726))
+- Fixed stale agent `synced` status after hot reload on cluster worker nodes. ([#36164](https://github.com/wazuh/wazuh/pull/36164))
 
 ### Agent
 
