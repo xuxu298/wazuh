@@ -350,7 +350,7 @@ everything below is.
 | `etc/shared/`, `var/multigroups/` | yes | `config_hash` converges |
 | **`etc/certs/`** | **no** | Every node needs its own listener certificate |
 | **`var/upgrade/`** | **no** | A custom WPK must be on **every** node |
-| **remoted's in-memory agent registry** | **no** | See the `403` below |
+| remoted's in-memory agent registry | no | Nothing to align: a node reads an agent's groups from its own database, see below |
 
 ### Measured windows
 
@@ -367,19 +367,25 @@ In practice an agent meets **three different errors in the same burst** — a `5
 pipeline is not ready, a `401` from a node without the credential yet, and under passthrough a TLS
 error with no HTTP status. Same cause, cleared in 5 to 15 seconds.
 
-### The `403` that is not a propagation window
+### Configuration downloads on a node the agent has not contacted
 
-`POST /control` registers an agent in the memory of the node that handled it, and **nothing
-replicates that registry**. A `POST /download` for `resource_type: config` routed to a node that has
-not yet served this agent a `/control` is refused with `403`.
+A `POST /download` for `resource_type: config` is served only for the selector the agent's own
+groups produce. Each node caches the groups of the agents it serves in memory, and nothing
+replicates that cache. But a node that holds no fresh membership for the agent (it never served it a
+`/control`, it restarted, or the entry is older than
+[`remoted.control_groups_refresh_interval`](../configuration.md#remotedcontrol_groups_refresh_interval))
+reads the groups from its own `wazuh-manager-db`, which the cluster keeps in sync. A download can
+therefore land on any node. What remains:
 
-It also converges, but through the agent's own notify cycle rather than through the cluster, so
-**the window grows with the number of nodes**: covering N nodes with random routing needs `N·H(N)`
-notifies — about 6 at three nodes, 30 at ten, 72 at twenty. At the default `notify_time` of 10 s and
-ten nodes that is roughly five minutes before a freshly enrolled agent can fetch its configuration
-from *every* node.
+* `503` with `{"error":"dependency_unavailable","dependency":"wazuh-db"}` while that node's database
+  has no row for the agent yet, or does not answer. A node adds new agents to its database as
+  `client.keys` reaches it, so the first case falls inside the windows above.
+* A brief `403` around a group change: the master sends group changes to the workers every 10
+  seconds, and a node that has not applied one yet refuses the new selector, while one that has
+  refuses the old.
 
-It affects only configuration downloads; WPK downloads are not gated this way.
+It affects only configuration downloads; WPK downloads are not gated this way. Diagnosis:
+[troubleshooting §4 and §7](../../cluster/lb-troubleshooting.md).
 
 ### Values that must match across nodes
 
@@ -407,10 +413,11 @@ as the nodes, or distribute the anchor out of band.
 ### A degraded node stays in rotation
 
 `GET /` reports that the process is alive, not that the node can do its job. A node that has lost a
-dependency can answer `200` here, accept events with `202`, and fail `/control` with `500` — losing
-groups, configuration hashes and task delivery for every agent routed to it. Neither the balancer
-nor `cluster_control` nor the server API marks it. Treat sustained `500` on `/control` from one node
-as that node being degraded, and take it out of rotation manually.
+dependency can answer `200` here, accept events with `202`, and fail `/control` and configuration
+downloads with `503 dependency_unavailable` — losing groups, configuration hashes, configuration
+downloads and task delivery for every agent routed to it. Neither the balancer nor `cluster_control`
+nor the server API marks it. Treat sustained `503 dependency_unavailable` from one node as that node
+being degraded, and take it out of rotation manually.
 
 ## 8. Checklist before going to production
 
