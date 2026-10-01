@@ -53,7 +53,7 @@ feature under test answers as if the defect did not exist, which is worse than f
 `setup_lab.sh` refuses to continue unless both of these hold:
 
 ```bash
-strings /var/wazuh-manager/lib/libremoted_module.so | grep -c expectedSelectorFor   # /download authz
+strings /var/wazuh-manager/lib/libremoted_module.so | grep -c 'Cannot authorize /download'   # /download authz + wazuh-db fallback (#39147)
 grep -c '"ca_certificate"' /var/wazuh-manager/etc/wazuh-manager.schema.json
 ```
 
