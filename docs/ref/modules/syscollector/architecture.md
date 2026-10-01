@@ -967,13 +967,17 @@ Syscollector validates data for the following Wazuh indices:
 |------------|---------------|-------------|
 | `dbsync_hwinfo` | `wazuh-states-inventory-hardware` | Hardware information |
 | `dbsync_osinfo` | `wazuh-states-inventory-system` | Operating system details |
-| `dbsync_netinfo_iface` | `wazuh-states-inventory-network` | Network interfaces |
-| `dbsync_netinfo_proto` | `wazuh-states-inventory-network` | Network protocols |
-| `dbsync_netinfo_addr` | `wazuh-states-inventory-network` | Network addresses |
 | `dbsync_packages` | `wazuh-states-inventory-packages` | Installed packages |
-| `dbsync_hotfixes` | `wazuh-states-inventory-hotfixes` | System hotfixes (Windows) |
-| `dbsync_ports` | `wazuh-states-inventory-ports` | Open network ports |
 | `dbsync_processes` | `wazuh-states-inventory-processes` | Running processes |
+| `dbsync_ports` | `wazuh-states-inventory-ports` | Open network ports |
+| `dbsync_users` | `wazuh-states-inventory-users` | System users |
+| `dbsync_groups` | `wazuh-states-inventory-groups` | System groups |
+| `dbsync_services` | `wazuh-states-inventory-services` | System services |
+| `dbsync_browser_extensions` | `wazuh-states-inventory-browser-extensions` | Browser extensions |
+| `dbsync_hotfixes` | `wazuh-states-inventory-hotfixes` | System hotfixes (Windows) |
+| `dbsync_network_iface` | `wazuh-states-inventory-interfaces` | Network interfaces |
+| `dbsync_network_protocol` | `wazuh-states-inventory-protocols` | Network protocols |
+| `dbsync_network_address` | `wazuh-states-inventory-networks` | Network addresses |
 
 ### Deferred Deletion Pattern
 

@@ -32,6 +32,14 @@ These schemas define the standardized format for inventory data that is sent to 
 
 ## Database Tables
 
+Every inventory table ends with the same three columns:
+
+- `sync`: `1` once the row is synchronized; `0` while a per-index document limit holds it back.
+- `checksum`: hash of the row, used to detect changes.
+- `version`: version of the row, sent as `document_version` in its stateful event.
+
+The package version columns are named `version_` (`dbsync_packages`) and `package_version_` (`dbsync_browser_extensions`), so they do not clash with `version`.
+
 ### Operating System Information (`dbsync_osinfo`)
 
 Stores operating system details and characteristics.
@@ -47,14 +55,16 @@ CREATE TABLE dbsync_osinfo (
     os_minor TEXT,
     os_patch TEXT,
     os_build TEXT,
-    os_type TEXT,
     os_platform TEXT,
+    os_type TEXT,
     os_kernel_name TEXT,
     os_kernel_release TEXT,
     os_kernel_version TEXT,
     os_distribution_release TEXT,
     os_full TEXT,
+    sync INTEGER DEFAULT 0,
     checksum TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (os_name, os_version)
 ) WITHOUT ROWID;
 ```
@@ -79,7 +89,9 @@ CREATE TABLE dbsync_hwinfo (
     memory_total INTEGER,
     memory_free INTEGER,
     memory_used INTEGER,
+    sync INTEGER DEFAULT 0,
     checksum TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (serial_number)
 ) WITHOUT ROWID;
 ```
@@ -98,7 +110,7 @@ Stores installed software packages and their metadata.
 ```sql
 CREATE TABLE dbsync_packages(
     name TEXT,
-    version TEXT,
+    version_ TEXT,
     vendor TEXT,
     installed TEXT,
     path TEXT,
@@ -110,13 +122,15 @@ CREATE TABLE dbsync_packages(
     multiarch TEXT,
     source TEXT,
     type TEXT,
+    sync INTEGER DEFAULT 0,
     checksum TEXT,
-    PRIMARY KEY (name,version,architecture,type,path)
+    version INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (name,version_,architecture,type,path)
 ) WITHOUT ROWID;
 ```
 
 **Key Fields:**
-- Composite primary key: `(name,version,architecture,type,path)`
+- Composite primary key: `(name,version_,architecture,type,path)`
 - `size`: Package size in bytes
 - `installed`: Installation timestamp
 - `type`: Package type (rpm, deb, msi, etc.)
@@ -143,7 +157,9 @@ CREATE TABLE dbsync_network_iface (
     host_network_ingress_errors INTEGER,
     host_network_egress_drops INTEGER,
     host_network_ingress_drops INTEGER,
+    sync INTEGER DEFAULT 0,
     checksum TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (interface_name,interface_alias,interface_type)
 ) WITHOUT ROWID;
 ```
@@ -165,7 +181,9 @@ CREATE TABLE dbsync_network_protocol (
     network_gateway TEXT,
     network_dhcp INTEGER,
     network_metric TEXT,
+    sync INTEGER DEFAULT 0,
     checksum TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (interface_name,network_type)
 ) WITHOUT ROWID;
 ```
@@ -183,7 +201,9 @@ CREATE TABLE dbsync_network_address (
     network_ip TEXT,
     network_netmask TEXT,
     network_broadcast TEXT,
+    sync INTEGER DEFAULT 0,
     checksum TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (interface_name,network_type,network_ip)
 ) WITHOUT ROWID;
 ```
@@ -207,7 +227,9 @@ CREATE TABLE dbsync_ports (
     interface_state TEXT,
     process_pid BIGINT,
     process_name TEXT,
+    sync INTEGER DEFAULT 0,
     checksum TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (file_inode, network_transport, source_ip, source_port)
 ) WITHOUT ROWID;
 ```
@@ -233,8 +255,10 @@ CREATE TABLE dbsync_processes (
     command_line TEXT,
     args TEXT,
     args_count BIGINT,
-    start BIGINT,
+    start TEXT,
+    sync INTEGER DEFAULT 0,
     checksum TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (pid)
 ) WITHOUT ROWID;
 ```
@@ -261,17 +285,17 @@ CREATE TABLE dbsync_users (
     user_groups TEXT,
     user_group_id BIGINT,
     user_group_id_signed BIGINT,
-    user_created DOUBLE,
+    user_created TEXT,
     user_roles TEXT,
     user_shell TEXT,
     user_type TEXT,
     user_is_hidden INTEGER,
     user_is_remote INTEGER,
-    user_last_login BIGINT,
+    user_last_login TEXT,
     user_auth_failed_count BIGINT,
-    user_auth_failed_timestamp DOUBLE,
-    user_password_last_change DOUBLE,
-    user_password_expiration_date INTEGER,
+    user_auth_failed_timestamp TEXT,
+    user_password_last_change BIGINT,
+    user_password_expiration_date TEXT,
     user_password_hash_algorithm TEXT,
     user_password_inactive_days INTEGER,
     user_password_max_days_between_changes INTEGER,
@@ -283,7 +307,9 @@ CREATE TABLE dbsync_users (
     login_status INTEGER,
     login_tty TEXT,
     login_type TEXT,
+    sync INTEGER DEFAULT 0,
     checksum TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (user_name)
 ) WITHOUT ROWID;
 ```
@@ -308,7 +334,9 @@ CREATE TABLE dbsync_groups (
     group_uuid TEXT,
     group_is_hidden INTEGER,
     group_users TEXT,
+    sync INTEGER DEFAULT 0,
     checksum TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (group_name)
 ) WITHOUT ROWID;
 ```
@@ -357,7 +385,9 @@ CREATE TABLE dbsync_services (
     service_target_ephemeral_id BIGINT,
     service_target_type TEXT,
     service_target_address TEXT,
+    sync INTEGER DEFAULT 0,
     checksum TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (service_id, file_path)
 ) WITHOUT ROWID;
 ```
@@ -378,7 +408,7 @@ CREATE TABLE dbsync_browser_extensions (
     user_id TEXT,
     package_name TEXT,
     package_id TEXT,
-    package_version TEXT,
+    package_version_ TEXT,
     package_description TEXT,
     package_vendor TEXT,
     package_build_version TEXT,
@@ -396,13 +426,15 @@ CREATE TABLE dbsync_browser_extensions (
     browser_profile_referenced INTEGER,
     package_installed TEXT,
     file_hash_sha256 TEXT,
+    sync INTEGER DEFAULT 0,
     checksum TEXT,
-    PRIMARY KEY (browser_name,user_id,browser_profile_name,package_name,package_version)
+    version INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (browser_name,user_id,browser_profile_path,package_name,package_version_)
 ) WITHOUT ROWID;
 ```
 
 **Key Fields:**
-- Composite primary key: `(browser_name,user_id,browser_profile_name,package_name,package_version)`
+- Composite primary key: `(browser_name,user_id,browser_profile_path,package_name,package_version_)`
 - Security-relevant extension permissions and source information
 
 ---
@@ -414,7 +446,9 @@ Stores Windows system hotfix/patch information.
 ```sql
 CREATE TABLE dbsync_hotfixes(
     hotfix_name TEXT,
+    sync INTEGER DEFAULT 0,
     checksum TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (hotfix_name)
 ) WITHOUT ROWID;
 ```
@@ -429,10 +463,10 @@ CREATE TABLE dbsync_hotfixes(
 Stores recovery metadata for each inventory table, tracking the last synchronization timestamp.
 
 ```sql
-CREATE TABLE table_metadata (
+CREATE TABLE IF NOT EXISTS table_metadata (
     table_name TEXT PRIMARY KEY,
-    last_sync_time INTEGER DEFAULT 0
-) WITHOUT ROWID;
+    last_sync_time INTEGER NOT NULL
+);
 ```
 
 **Key Fields:**

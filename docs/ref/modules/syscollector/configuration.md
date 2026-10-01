@@ -33,7 +33,7 @@ Enable or disable the Syscollector module.
 How frequently the module performs inventory scans.
 
 - **Default value:** `1h`
-- **Allowed values:** Time period (minimum `60s`)
+- **Allowed values:** Positive time period; `0` is rejected
 - **Note:** Accepts time suffixes: `s` (seconds), `m` (minutes), `h` (hours), `d` (days)
 
 #### scan_on_start
@@ -177,7 +177,7 @@ How often to trigger synchronization with the manager.
 Time between integrity checks for each inventory table.
 
 - **Default value:** `86400` (24 hours)
-- **Allowed values:** `60` to unlimited (seconds)
+- **Allowed values:** `0` or more (seconds)
 - **Note:** Each of the 13 inventory tables (osinfo, hwinfo, packages, processes, ports, network_iface, network_protocol, network_address, users, groups, services, browser_extensions, hotfixes) is checked independently. When the interval elapses for a table:
   1. Agent calculates checksum-of-checksums for the table
   2. Sends checksum to manager for validation
