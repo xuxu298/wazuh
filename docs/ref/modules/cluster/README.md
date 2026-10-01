@@ -71,7 +71,10 @@ Several internal threads handle different cluster operations:
   Sends agent operating system details and status information. The master validates agent existence before storing updates to avoid stale data.
 
 - **Agent groups send thread**
-  Distributes agent group assignment information to worker nodes. This data is calculated by the master when agents connect for the first time.
+  Distributes agent group assignment information to worker nodes. The master computes this data periodically (every 10 seconds) and sends only what changed since the last round; a worker whose database no longer matches receives the entire set.
+
+- **Registry publish (workers)**
+  After a worker applies a chunk of agent group assignments to its local database, it tells the local `wazuh-manager-remoted` which agents it updated (`POST /_internal/agents/groups` on remoted's local admin socket), so that configuration downloads authorized by remoted follow the new groups at once instead of when remoted's cached membership expires (`remoted.control_groups_refresh_interval`). A chunk that could not be applied makes remoted read those agents' groups from the database again. Publication is best effort: when remoted is unreachable the worker logs a warning under the `Registry publish` tag and remoted falls back on expiry; it never delays or changes the synchronization with the master.
 
 - **Local agent-groups thread**
   Periodically retrieves agent group information from the database and caches it on the master to avoid redundant queries for each worker.
