@@ -336,3 +336,11 @@ def test_manifest_files(tmp_path):
     assert list(result["files"]) == ["libraries/sources/zlib.tar.gz", "libraries/windows.tar.gz"]
     assert result["files"]["libraries/windows.tar.gz"] == hashlib.sha256(b"w").hexdigest()
     assert deps.drift(minimal(), result) == []
+
+
+def test_sbom_skips_validation(tmp_path):
+    inventory = tmp_path / "deps.json"
+    inventory.write_text(json.dumps(doc(entry("cpython", version="3.0.0"))))
+    assert run("check", "--no-make", "--inventory", str(inventory)).returncode == 1
+    result = run("sbom", "--inventory", str(inventory))
+    assert result.returncode == 0 and json.loads(result.stdout)["components"][0]["version"] == "3.0.0"
