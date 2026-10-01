@@ -85,28 +85,20 @@ Triggers synchronization of all pending differences.
 
 **Signature:**
 ```c
-bool asp_sync_module(AgentSyncProtocolHandle* handle,
-                     Mode_t mode,
-                     unsigned int sync_timeout,
-                     unsigned int sync_retries,
-                     size_t max_eps);
+SyncModuleResult_t asp_sync_module(AgentSyncProtocolHandle* handle,
+                                   Mode_t mode);
 ```
 
 **Parameters:**
 - `handle`: Sync protocol handle
 - `mode`: Sync mode (`MODE_DELTA` for FIM)
-- `sync_timeout`: Response timeout in seconds
-- `sync_retries`: Maximum retry attempts
-- `max_eps`: Maximum events per second (0 = unlimited)
+
+**Returns:** a `SyncModuleResult_t` whose `success` field tells whether the synchronization completed, with `failure_reason` set when it did not.
 
 **Usage Example:**
 ```c
 // FIM integrity thread triggers periodic synchronization
-bool sync_success = asp_sync_module(syscheck.sync_handle,
-                                   MODE_DELTA,                    // sync mode
-                                   syscheck.sync_response_timeout, // timeout
-                                   FIM_SYNC_RETRIES,              // retries
-                                   syscheck.sync_max_eps);        // max events/sec
+SyncModuleResult_t sync_result = asp_sync_module(syscheck.sync_handle, MODE_DELTA);
 ```
 
 #### `asp_parse_response_buffer()`
@@ -141,19 +133,13 @@ Notifies the manager that specific indices have been cleaned and should be remov
 ```c
 bool asp_notify_data_clean(AgentSyncProtocolHandle* handle,
                            const char** indices,
-                           size_t indices_count,
-                           unsigned int sync_timeout,
-                           unsigned int retries,
-                           size_t max_eps);
+                           size_t indices_count);
 ```
 
 **Parameters:**
 - `handle`: Sync protocol handle
 - `indices`: Array of index names to clean
 - `indices_count`: Number of indices in the array
-- `sync_timeout`: Response timeout in seconds
-- `retries`: Maximum retry attempts
-- `max_eps`: Maximum events per second (0 = unlimited)
 
 **Returns:**
 - `true`: Notification succeeded
@@ -168,12 +154,7 @@ const char* indices_to_clean[] = {
     FIM_REGISTRY_VALUES_SYNC_INDEX
 };
 
-bool notify_success = asp_notify_data_clean(syscheck.sync_handle,
-                                           indices_to_clean,
-                                           3,
-                                           syscheck.sync_response_timeout,
-                                           FIM_SYNC_RETRIES,
-                                           syscheck.sync_max_eps);
+bool notify_success = asp_notify_data_clean(syscheck.sync_handle, indices_to_clean, 3);
 ```
 
 #### `asp_delete_database()`

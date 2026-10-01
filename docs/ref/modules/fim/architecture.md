@@ -541,9 +541,7 @@ if (indices_count > 0) {
 
     bool ret = false;
     while (!ret) {
-        ret = asp_notify_data_clean(syscheck.sync_handle, indices, indices_count,
-                                    syscheck.sync_response_timeout, FIM_SYNC_RETRIES,
-                                    syscheck.sync_max_eps);
+        ret = asp_notify_data_clean(syscheck.sync_handle, indices, indices_count);
         if (!ret) {
             // Wait sync_interval before retry
             for (uint32_t i = 0; i < syscheck.sync_interval; i++) {
@@ -639,9 +637,7 @@ void * fim_run_integrity(__attribute__((unused)) void * args) {
         mdebug1("Running inventory synchronization.");
 
         // Trigger synchronization of all pending FIM changes
-        asp_sync_module(syscheck.sync_handle, MODE_DELTA,
-                       syscheck.sync_response_timeout, FIM_SYNC_RETRIES,
-                       syscheck.sync_max_eps);
+        asp_sync_module(syscheck.sync_handle, MODE_DELTA);
 
         sleep(syscheck.sync_interval);
     }

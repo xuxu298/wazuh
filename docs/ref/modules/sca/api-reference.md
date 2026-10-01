@@ -165,15 +165,12 @@ EXPORTED bool sca_parse_response(const unsigned char* data, size_t length);
 Notifies the manager that specific indices have been cleaned and should be removed.
 
 ```c
-EXPORTED bool sca_notify_data_clean(const char** indices, size_t indices_count, unsigned int timeout, unsigned int retries, size_t max_eps);
+EXPORTED bool sca_notify_data_clean(const char** indices, size_t indices_count);
 ```
 
 **Parameters:**
 - `indices`: Array of index names to clean
 - `indices_count`: Number of indices in the array
-- `timeout`: Timeout value in seconds for the notification operation
-- `retries`: Number of retry attempts on failure
-- `max_eps`: Maximum events per second during the notification
 
 **Returns:**
 - `true`: Notification succeeded
@@ -191,10 +188,7 @@ const char* indices_to_clean[] = {
     "wazuh-states-sca-policy2"
 };
 
-bool notify_success = sca_notify_data_clean(indices_to_clean, 2,
-                                           sca_config->sync_response_timeout,
-                                           SCA_SYNC_RETRIES,
-                                           sca_config->sync_max_eps);
+bool notify_success = sca_notify_data_clean(indices_to_clean, 2);
 ```
 
 ---

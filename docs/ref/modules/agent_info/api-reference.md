@@ -118,14 +118,6 @@ Delegates the call to the `AgentSyncProtocol` instance to process a response fro
 
 ---
 
-### `setSyncParameters()`
-Configures the parameters for the synchronization protocol.
-
-```cpp
-void setSyncParameters(uint32_t syncEndDelay, uint32_t timeout, uint32_t retries, long maxEps);
-```
----
-
 ### `processEvent()`
 The callback function invoked by `DBSync` when a change is detected in the database.
 
