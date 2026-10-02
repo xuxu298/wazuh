@@ -143,7 +143,7 @@
 
 <decoder name="auditd-config_change">
   <parent>auditd</parent>
-  <regex offset="after_regex">key=\((\S+)\)|key="(\S+)"|key=(\S+) </regex>
+  <regex offset="after_regex">key="(\S+)"|key=\((\S+)\)|key=(\S+) </regex>
   <order>audit.key</order>
 </decoder>
 
